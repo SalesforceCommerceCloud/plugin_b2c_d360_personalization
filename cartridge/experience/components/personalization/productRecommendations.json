@@ -1,0 +1,50 @@
+{
+    "name": "Personalization Product Recommendations",
+    "description": "Renders a Salesforce Personalization recommendation zone. Tiles are hydrated live via SCAPI Shopper Products at request time by default, or via the storefront's native product tile per Render Mode below, so pricing/promo/availability are never stale.",
+    "group": "personalization",
+    "attribute_definition_groups": [
+        {
+            "id": "default",
+            "attribute_definitions": [
+                {
+                    "id": "title",
+                    "name": "Title",
+                    "description": "Optional headline shown above the recommendation zone. Leave blank to omit.",
+                    "type": "string",
+                    "required": false
+                },
+                {
+                    "id": "personalizationPointName",
+                    "name": "Personalization Point Name",
+                    "description": "Salesforce Personalization point/decision name to request for this component instance. Leave blank to resolve via the Point Name Map (using Context Key below) or, failing that, the site-wide Personalization Point Name preference.",
+                    "type": "string",
+                    "required": false
+                },
+                {
+                    "id": "maxTiles",
+                    "name": "Max Tiles",
+                    "description": "Maximum number of product tiles to render for this instance (enter a number, e.g. 8). Leave blank to fall back to the site-wide Max Tiles preference. Also capped by SCAPI's 24-id-per-call batch limit.",
+                    "type": "string",
+                    "required": false
+                },
+                {
+                    "id": "contextKey",
+                    "name": "Context Key",
+                    "description": "Business-user-assigned key identifying this slot (e.g. \"home-hero\", \"pdp-similar\"), looked up in the site's Point Name Map (ps_pointNameMap) to resolve a personalization point when Personalization Point Name above is left blank. Leave blank if using an explicit Personalization Point Name.",
+                    "type": "string",
+                    "required": false
+                },
+                {
+                    "id": "renderMode",
+                    "name": "Render Mode",
+                    "description": "How this instance turns personalization product ids into tiles. \"scapi\" hydrates client-side via SCAPI Shopper Products (needs SCAPI/SLAS Site Preferences configured). \"sfra\" instead fetches the storefront's native, already-cached product tile (Tile-Show) per id - no SCAPI/SLAS setup required, and it reflects logged-in/customer-group pricing.",
+                    "type": "enum",
+                    "values": ["scapi", "sfra"],
+                    "default_value": "scapi",
+                    "required": false
+                }
+            ]
+        }
+    ],
+    "region_definitions": []
+}

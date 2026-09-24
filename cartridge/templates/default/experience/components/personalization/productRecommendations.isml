@@ -1,0 +1,83 @@
+<isscript>
+    var psCarouselId = 'ps-carousel-' + pdict.componentId;
+</isscript>
+
+<isif condition="${pdict.psEnabled}">
+    <div class="ps-zone" id="ps-zone-${pdict.componentId}"
+        data-ps-point="${pdict.pointName}"
+        data-ps-max-tiles="${pdict.maxTiles}"
+        data-ps-render-mode="${pdict.renderMode}">
+
+        <iscomment>
+            assets.addCss/addJs are unreliable for a component that can appear anywhere in a
+            Page Designer page body — the page head may already be printed by the time this
+            component renders. carousel.js is loaded inline below (same as personalizationTiles.js);
+            carousel.css is injected into the page head client-side by personalizationTiles.js.
+        </iscomment>
+        <script src="${URLUtils.staticURL('/js/carousel.js')}"></script>
+        <script>
+            window.psCarouselCssUrl = '${URLUtils.staticURL('/css/experience/components/commerceLayouts/carousel.css')}';
+        </script>
+
+        <isif condition="${pdict.title}">
+            <h3 class="ps-zone-title">${pdict.title}</h3>
+        </isif>
+
+        <div class="experience-commerce_layouts-carousel">
+            <div class="carousel slide carousel-sm-2 carousel-md-4" id="${psCarouselId}"
+                 data-keyboard="true" data-interval="false"
+                 data-xs="1" data-sm="2" data-md="4" data-number-of-slides="0"
+                 data-ps-carousel>
+                <div class="carousel-inner" data-ps-tile-row aria-live="polite" aria-busy="true"></div>
+                <ol class="pd-carousel-indicators" data-ps-indicators></ol>
+                <a class="carousel-control-prev" href="${'#' + psCarouselId}" role="button" data-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="sr-only">${Resource.msg('ps.carousel.previous', 'personalization', null)}</span>
+                </a>
+                <a class="carousel-control-next" href="${'#' + psCarouselId}" role="button" data-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="sr-only">${Resource.msg('ps.carousel.next', 'personalization', null)}</span>
+                </a>
+            </div>
+        </div>
+
+        <iscomment>
+            Reuses the storefront's existing product-tile markup/classes so hydrated tiles inherit
+            the same CSS and caching as tiles rendered elsewhere on the site. Adjust the selectors
+            below to match this storefront's actual .product-tile markup before shipping.
+        </iscomment>
+        <template data-ps-tile-template>
+            <div class="product product-tile ps-tile-template" data-pid="">
+                <div class="image-container">
+                    <a data-ps-field="link" href="#">
+                        <img data-ps-field="image" class="tile-image" src="" alt="" />
+                    </a>
+                </div>
+                <div class="tile-body">
+                    <a data-ps-field="link" href="#">
+                        <span data-ps-field="name" class="pdp-link"></span>
+                    </a>
+                    <div class="price" data-ps-field="priceContainer">
+                        <span data-ps-field="price"></span>
+                    </div>
+                    <div data-ps-field="promo" class="promotion-message" hidden></div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <script>
+        window.psConfigUrl = '${URLUtils.url('PersonalizationTiles-GetConfig')}';
+    </script>
+    <script src="${URLUtils.staticURL('/js/personalizationTiles.js')}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Page Designer allows multiple instances of this component on one page, so this
+            // inline script is emitted once per instance; psInitTiles() guards against running
+            // more than once and discovers/renders every [data-ps-point] on the page in one pass.
+            if (window.psInitTiles) {
+                window.psInitTiles(window.psConfigUrl);
+            }
+        });
+    </script>
+</isif>

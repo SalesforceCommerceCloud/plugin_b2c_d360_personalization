@@ -1,0 +1,5 @@
+.DS_Store
+node_modules/
+HANDOVER.md
+*.code-workspace
+.vscode/system-objecttype-extensions.d.ts

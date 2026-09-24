@@ -1,0 +1,8 @@
+{
+    "caches": [
+        {
+            "id": "personalizationTilesPrices",
+            "expireAfterSeconds": 60
+        }
+    ]
+}

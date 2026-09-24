@@ -1,0 +1,10 @@
+<iscomment>
+    Side-by-side comparison carousel for the homepage demo: shares the "home-hero" contextKey
+    with slots/personalization/home.isml, so it resolves to the same personalization point
+    (see ps_pointNameMap) and renders the identical decision product ids as the primary
+    home-personalization-m slot, hydrated live via SCAPI, labeled distinctly for comparison.
+</iscomment>
+<isset name="contextKey" value="${'home-hero'}" scope="pdict" />
+<isset name="renderMode" value="${'scapi'}" scope="pdict" />
+<isset name="title" value="${'SCAPI Recommendation'}" scope="pdict" />
+<isinclude template="personalization/productRecommendations" />

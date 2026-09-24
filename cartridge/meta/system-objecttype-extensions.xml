@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xmlns="http://www.demandware.com/xml/impex/metadata/2006-10-31">
+    <type-extension type-id="SitePreferences">
+        <custom-attribute-definitions>
+            <!-- Required Settings -->
+            <attribute-definition attribute-id="ps_enabled">
+                <display-name xml:lang="x-default">Enable Personalization Tiles</display-name>
+                <description xml:lang="x-default">Enable or disable the personalization-to-SCAPI tile hydration feature on the storefront</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+
+            <attribute-definition attribute-id="ps_scapiShortCode">
+                <display-name xml:lang="x-default">SCAPI Short Code</display-name>
+                <description xml:lang="x-default">The Commerce API short code for this org (e.g. "kv7kzm78"). Required.</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+
+            <attribute-definition attribute-id="ps_scapiOrgId">
+                <display-name xml:lang="x-default">SCAPI Organization ID</display-name>
+                <description xml:lang="x-default">Salesforce Commerce API organization id (e.g. "f_ecom_zzrf_001"). Required.</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+
+            <attribute-definition attribute-id="ps_scapiClientId">
+                <display-name xml:lang="x-default">SLAS Client ID</display-name>
+                <description xml:lang="x-default">The public (PKCE) SLAS client id used to obtain the guest/shopper token for client-side SCAPI calls. Required. Its Account Manager CORS allowed-origins list must include this storefront's hostname(s).</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+
+            <attribute-definition attribute-id="ps_scapiSiteId">
+                <display-name xml:lang="x-default">SCAPI Site ID</display-name>
+                <description xml:lang="x-default">The SCAPI site id to scope product lookups to (e.g. "RefArchGlobal"). Required.</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+
+            <attribute-definition attribute-id="ps_scapiRedirectUri">
+                <display-name xml:lang="x-default">SLAS Redirect URI</display-name>
+                <description xml:lang="x-default">A redirect_uri registered on the ps_scapiClientId SLAS client in Account Manager/SLAS Admin. Used server-side only for the guest PKCE token exchange (PersonalizationTiles-GetToken) — SLAS never actually delivers a response there, so it does not need to be reachable, only registered. Required.</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+
+            <!-- Personalization / Point Settings -->
+            <attribute-definition attribute-id="ps_personalizationPointName">
+                <display-name xml:lang="x-default">Personalization Point Name</display-name>
+                <description xml:lang="x-default">Default Salesforce Personalization point/decision name to request when a slot (plain include or Page Designer component instance) doesn't specify its own point name and no entry matches it in the Point Name Map. Optional — can be overridden per-slot via the personalizationPointName template parameter / component attribute, or via ps_pointNameMap.</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+
+            <attribute-definition attribute-id="ps_pointNameMap">
+                <display-name xml:lang="x-default">Point Name Map (JSON)</display-name>
+                <description xml:lang="x-default">Optional JSON map resolving a slot's contextKey to a personalization point name, without editing code/Page Designer. Shape: {"version":1,"architectures":{"common":{"&lt;contextKey&gt;":"&lt;PointName&gt;"},"sfra":{...},"pageDesigner":{...},"pwa":{...}}}. The "pwa" bucket is a reserved convention for a future headless app — this cartridge does not read it. Resolution order per slot: explicit point name on the slot &gt; architectures[architecture][contextKey] &gt; architectures.common[contextKey] &gt; Personalization Point Name default above. Malformed JSON is ignored (logged) and falls back to the default — it can never break rendering.</description>
+                <type>text</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+
+            <attribute-definition attribute-id="ps_maxTiles">
+                <display-name xml:lang="x-default">Max Tiles Per Zone</display-name>
+                <description xml:lang="x-default">Maximum number of product tiles to render per zone. Also capped by SCAPI's 24-id-per-call batch limit. Default: 8.</description>
+                <type>int</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+
+            <attribute-definition attribute-id="ps_expand">
+                <display-name xml:lang="x-default">SCAPI Expand Params</display-name>
+                <description xml:lang="x-default">Comma-separated SCAPI Shopper Products "expand" parameter values. Default: "availability,images,prices,promotions,variations".</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+
+            <attribute-definition attribute-id="ps_dcSdkUrl">
+                <display-name xml:lang="x-default">Data Cloud SDK Script URL</display-name>
+                <description xml:lang="x-default">Tenant-specific Salesforce Interactions/Data Cloud beacon SDK script URL (exposes window.getSalesforceInteractions()), e.g. "https://cdn.c360a.salesforce.com/beacon/c360a/&lt;org-guid&gt;/scripts/c360a.min.js".</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+
+            <attribute-definition attribute-id="ps_productIdField">
+                <display-name xml:lang="x-default">Personalization Product ID Field</display-name>
+                <description xml:lang="x-default">Field name on each Personalization decision item that holds the product id. Default: "ssot__Id__c" — varies by customer implementation.</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+
+            <attribute-definition attribute-id="ps_activityTrackingEnabled">
+                <display-name xml:lang="x-default">Enable Personalization Activity Tracking</display-name>
+                <description xml:lang="x-default">Enable or disable sending "personalization-view" and "personalization-click" activity events (via getSalesforceInteractions().sendEvent()) for tiles rendered by this feature. Requires the Data Cloud SDK Script URL to be configured. Default: true.</description>
+                <type>boolean</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+        </custom-attribute-definitions>
+
+        <group-definitions>
+            <attribute-group group-id="D360 Personalization">
+                <display-name xml:lang="x-default">Data Cloud Personalization</display-name>
+                <attribute attribute-id="ps_enabled"/>
+                <attribute attribute-id="ps_scapiShortCode"/>
+                <attribute attribute-id="ps_scapiOrgId"/>
+                <attribute attribute-id="ps_scapiClientId"/>
+                <attribute attribute-id="ps_scapiSiteId"/>
+                <attribute attribute-id="ps_scapiRedirectUri"/>
+                <attribute attribute-id="ps_personalizationPointName"/>
+                <attribute attribute-id="ps_pointNameMap"/>
+                <attribute attribute-id="ps_maxTiles"/>
+                <attribute attribute-id="ps_expand"/>
+                <attribute attribute-id="ps_dcSdkUrl"/>
+                <attribute attribute-id="ps_productIdField"/>
+                <attribute attribute-id="ps_activityTrackingEnabled"/>
+            </attribute-group>
+        </group-definitions>
+    </type-extension>
+</metadata>

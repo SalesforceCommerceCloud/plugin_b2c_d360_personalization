@@ -1,0 +1,92 @@
+<isscript>
+    var configHelper = require('*/cartridge/scripts/personalization/configHelper');
+    // Only gated on the enable/disable switch here — the Personalization decision call has
+    // no dependency on the SCAPI hydration fields, so this doesn't require those to be set.
+    var psEnabled = configHelper.getConfig().enabled;
+    var psPointName = configHelper.resolvePointName('sfra', pdict.contextKey, pdict.personalizationPointName);
+    var psCarouselId = 'ps-carousel-' + (pdict.contextKey || 'default');
+    // Which tile-rendering strategy this zone uses — set by the slot template that includes
+    // this file (see slots/personalization/{home,cart}.isml and their -sfra variants).
+    // Whitelisted rather than trusted verbatim so a bad/missing value can never break rendering.
+    var psRenderMode = (pdict.renderMode === 'sfra') ? 'sfra' : 'scapi';
+</isscript>
+
+<isif condition="${psEnabled}">
+    <div class="ps-zone" data-ps-point="${psPointName}" data-ps-context="${pdict.contextKey || ''}" data-ps-render-mode="${psRenderMode}">
+        <iscomment>
+            assets.addCss/addJs won't work here: this template renders inside a Content Slot,
+            deep in the page body, well after common/layout/htmlHead already printed the page head —
+            so anything registered this late never makes it onto the page. carousel.js is loaded
+            inline below (same as personalizationTiles.js); carousel.css is injected into the page
+            head client-side by personalizationTiles.js for the same reason.
+        </iscomment>
+        <script src="${URLUtils.staticURL('/js/carousel.js')}"></script>
+        <script>
+            window.psCarouselCssUrl = '${URLUtils.staticURL('/css/experience/components/commerceLayouts/carousel.css')}';
+        </script>
+
+        <h3 class="ps-zone-title">${pdict.title || Resource.msg('ps.recommendations.title', 'personalization', null)}</h3>
+
+        <div class="experience-commerce_layouts-carousel">
+            <iscomment>
+                Carousel shell is rendered server-side (empty) so app_storefront_base's carousel.js
+                touch-swipe/accessibility bindings — which run once at document-ready against
+                whatever .carousel elements already exist — pick this one up. Tiles are injected
+                into .carousel-inner client-side once the Personalization decision resolves (same
+                async-fill pattern as einsteinCarousel.js's fillDomElement).
+            </iscomment>
+            <div class="carousel slide carousel-sm-2 carousel-md-4" id="${psCarouselId}"
+                 data-keyboard="true" data-interval="false"
+                 data-xs="1" data-sm="2" data-md="4" data-number-of-slides="0"
+                 data-ps-carousel>
+                <div class="carousel-inner" data-ps-tile-row aria-live="polite" aria-busy="true"></div>
+                <ol class="pd-carousel-indicators" data-ps-indicators></ol>
+                <a class="carousel-control-prev" href="${'#' + psCarouselId}" role="button" data-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="sr-only">${Resource.msg('ps.carousel.previous', 'personalization', null)}</span>
+                </a>
+                <a class="carousel-control-next" href="${'#' + psCarouselId}" role="button" data-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="sr-only">${Resource.msg('ps.carousel.next', 'personalization', null)}</span>
+                </a>
+            </div>
+        </div>
+
+        <iscomment>
+            Reuses the storefront's existing product-tile markup/classes so hydrated tiles inherit
+            the same CSS and caching as tiles rendered elsewhere on the site (per the "leverage
+            existing cached components" requirement). Adjust the selectors below to match this
+            storefront's actual .product-tile markup before shipping.
+        </iscomment>
+        <template id="ps-tile-template" data-ps-tile-template>
+            <div class="product product-tile ps-tile-template" data-pid="">
+                <div class="image-container">
+                    <a data-ps-field="link" href="#">
+                        <img data-ps-field="image" class="tile-image" src="" alt="" />
+                    </a>
+                </div>
+                <div class="tile-body">
+                    <a data-ps-field="link" href="#">
+                        <span data-ps-field="name" class="pdp-link"></span>
+                    </a>
+                    <div class="price" data-ps-field="priceContainer">
+                        <span data-ps-field="price"></span>
+                    </div>
+                    <div data-ps-field="promo" class="promotion-message" hidden></div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <script>
+        window.psConfigUrl = '${URLUtils.url('PersonalizationTiles-GetConfig')}';
+    </script>
+    <script src="${URLUtils.staticURL('/js/personalizationTiles.js')}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.psInitTiles) {
+                window.psInitTiles(window.psConfigUrl);
+            }
+        });
+    </script>
+</isif>

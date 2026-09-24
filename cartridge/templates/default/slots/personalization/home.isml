@@ -1,0 +1,3 @@
+<isset name="contextKey" value="${'home-hero'}" scope="pdict" />
+<isset name="renderMode" value="${'scapi'}" scope="pdict" />
+<isinclude template="personalization/productRecommendations" />
