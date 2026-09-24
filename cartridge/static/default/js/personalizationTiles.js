@@ -204,8 +204,7 @@
 
         // performance.now() (not Date.now()) brackets just the SDK call itself — network time
         // to Data Cloud plus the SDK's own response handling — so this number is directly
-        // comparable to the GetToken/SCAPI/GetPrices stage timings in the performance report's
-        // request waterfall (docs/architecture-and-design/B2C_D360_personalization_Plugin_Performance_Evaluation.md §1).
+        // comparable to the GetToken/SCAPI/GetPrices stage timings in the request waterfall.
         var decisionFetchStart = window.performance && window.performance.now ? window.performance.now() : Date.now();
 
         return interactions.Personalization.fetch(pointNames)
@@ -726,8 +725,7 @@
     // Resolves the decision for a batch of zones (each zone's point name deduped within the
     // batch, same as before) and renders each one. Split out of fetchConfigAndInit so it can be
     // called once per "batch of zones that just became visible" instead of once for every zone
-    // on the page up front — see observeZonesForLazyRender below and Performance report §2.4
-    // (docs/architecture-and-design/B2C_D360_personalization_Plugin_Performance_Evaluation.md).
+    // on the page up front — see observeZonesForLazyRender below.
     function renderZoneBatch(zones, config) {
         var pointNamesByZone = zones.map(function (zoneEl) {
             return zoneEl.getAttribute('data-ps-point') || config.pointName;

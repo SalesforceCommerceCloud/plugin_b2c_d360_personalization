@@ -13,30 +13,19 @@ Shopper Browser → Personalization Engine (decision JSON: product IDs only)
 
 Data Cloud never sits on this path — every price/promo/availability field comes live from B2C Commerce at request time.
 
-See [docs/architecture-and-design/Development_HANDOVER.md](docs/architecture-and-design/Development_HANDOVER.md) for the full background (why this exists, known gaps) and the box-chart diagram this implements.
-
 ## Status
 
-Rough / not production-ready. See "Known gaps" in [docs/architecture-and-design/Development_HANDOVER.md](docs/architecture-and-design/Development_HANDOVER.md) before using this on a real storefront — in particular, the tile markup selectors are placeholders, and the `scapi` render mode needs a SLAS public (PKCE) client plus a separate SCAPI CORS Preferences registration for the storefront domain before it can hydrate live — resolved on sandbox `zzbf-001`/site `RefArch` as of 2026-09-21, but this registration is per-realm/per-`client_id`+site and must be repeated for any other environment (see [docs/deployment-and-setup/PageDesigner-Integration-Guide.md](docs/deployment-and-setup/PageDesigner-Integration-Guide.md)).
+Rough / not production-ready — in particular, the tile markup selectors are placeholders, and the `scapi` render mode needs a SLAS public (PKCE) client plus a separate SCAPI CORS Preferences registration for the storefront domain before it can hydrate live — resolved on sandbox `zzbf-001`/site `RefArch` as of 2026-09-21, but this registration is per-realm/per-`client_id`+site and must be repeated for any other environment.
 
 ## Setup
 
-This cartridge has no build step of its own — it drops into the target storefront project as-is. See the [Setup & Deployment Slack Canvas](https://salesforce.enterprise.slack.com/docs/T2E6RHTM0/F0C2HGRUPR9) for the full procedure (source of truth; the old [docs/archive/DeploymentGuide.md](docs/archive/DeploymentGuide.md) is superseded and kept for historical reference only); in short:
+This cartridge has no build step of its own — it drops into the target storefront project as-is. In short:
 
 1. **Cartridge path.** Add `plugin_b2c_d360_personalization` to the site's Cartridge Path (Business Manager → Administration → Sites → Manage Sites → *Site* → Settings), before the storefront's base cartridge (e.g. `app_storefront_base`).
 2. **Deploy the code** using the target storefront project's own build/upload tooling (WebDAV, `sfcc-ci`, the SFCC VS Code extension, etc.) — or, if you have the B2C Commerce CLI configured, `b2c code deploy --code-version <version> --cartridge plugin_b2c_d360_personalization --reload` (see [Deploy and Iterate with the B2C Commerce CLI](https://developer.salesforce.com/docs/commerce/b2c-commerce/guide/b2c-cartridges.html)).
 3. **Import the metadata** — upload and import [`cartridge/meta/ps-personalization-meta-import.zip`](cartridge/meta/ps-personalization-meta-import.zip) via Business Manager → Administration → Site Development → Import & Export.
 4. **Set Site Preferences** — see [Configuration](#configuration) below. At minimum set `ps_enabled` to see the dummy-tile preview end to end; the `ps_scapi*` preferences are only needed once live SCAPI hydration is wired up.
 5. **Place a recommendation zone** — Content Slot, Page Designer, or a static template include — see [Usage](#usage) below. Pick a [render mode](#render-mode-scapi-hydration-vs-native-sfra-tile) while you're there.
-
-## Documentation
-
-| Doc | Purpose |
-|-----|---------|
-| [docs/architecture-and-design/PersonalizationSCAPI-Design.md](docs/architecture-and-design/PersonalizationSCAPI-Design.md) | Full HLD/architecture/TSD — flow diagram, implementation steps, open items |
-| [Setup & Deployment Slack Canvas](https://salesforce.enterprise.slack.com/docs/T2E6RHTM0/F0C2HGRUPR9) | Step-by-step deployment/setup instructions (source of truth; supersedes [docs/archive/DeploymentGuide.md](docs/archive/DeploymentGuide.md)) |
-| [docs/deployment-and-setup/PageDesigner-Integration-Guide.md](docs/deployment-and-setup/PageDesigner-Integration-Guide.md) | Standing up a standalone Page Designer page with the SCAPI-hydrated recommendations component (internal-only — see [Status](#status)) |
-| [docs/architecture-and-design/Development_HANDOVER.md](docs/architecture-and-design/Development_HANDOVER.md) | Handover doc — origin, architecture, known gaps |
 
 ## Structure
 
@@ -90,7 +79,7 @@ Three ways to place a recommendation zone:
   There is no generic "Custom Attributes" field on the Slot Configuration screen, so `contextKey` isn't read from the slot instance — each slot points at its own small dedicated template which hardcodes its `contextKey`, then delegates to the shared `productRecommendations.isml` include. Adding a new slot elsewhere means adding one more small template (hardcoding that page's `contextKey`) and pointing a new slot's Template field at it — still no changes to `productRecommendations.isml` itself, and `ps_pointNameMap` still resolves the actual personalization point name per `contextKey`.
 - **Page Designer:** drag the **"Personalization Product Recommendations"** component (group: Personalization) onto a page/region in Business Manager Page Designer, and set its `Title` / `Personalization Point Name` / `Max Tiles` / `Context Key` / `Render Mode` attributes per instance. Multiple instances on one page are supported — each can reference a different personalization point (e.g. a homepage carousel vs. a PDP carousel), and all instances on a page are covered by a single Personalization decision call.
 
-  **If the component doesn't appear in the Add Component picker at all**, even with the cartridge active on the site's cartridge path/code version: Page Designer silently drops a component descriptor from its registry if `<group>/<id>.json` fails schema validation, with no error in the picker itself — check **Administration → Operations → Log Files** for `ComponentType schema validation of '<id>.json' failed`. See [PageDesigner-Integration-Guide.md §1](docs/deployment-and-setup/PageDesigner-Integration-Guide.md#1-confirm-code--cartridge-path) for the specific schema gotchas (no numeric attribute type; `region_definitions` is effectively required).
+  **If the component doesn't appear in the Add Component picker at all**, even with the cartridge active on the site's cartridge path/code version: Page Designer silently drops a component descriptor from its registry if `<group>/<id>.json` fails schema validation, with no error in the picker itself — check **Administration → Operations → Log Files** for `ComponentType schema validation of '<id>.json' failed`. Common schema gotchas: there's no numeric attribute type (use `string`), and `region_definitions` is effectively required.
 - **Static page templates:** include `productRecommendations.isml` directly, e.g.:
 
 ```isml
@@ -117,7 +106,7 @@ Every zone renders in one of two modes, read from a `data-ps-render-mode` attrib
 
 | Mode | How tiles are built | When to use it |
 |---|---|---|
-| `scapi` | Client-side: SLAS guest token → SCAPI Shopper Products `?ids=...` → hydrate the placeholder `<template>` | Needs a SLAS public (PKCE) client, a separate SCAPI CORS Preferences registration for the storefront domain (not a setting on the SLAS client itself — see [PageDesigner-Integration-Guide.md §3](docs/deployment-and-setup/PageDesigner-Integration-Guide.md#3-slas-client-public--pkce)), and the five `ps_scapi*` preferences. Guest pricing only (see [Development_HANDOVER.md](docs/architecture-and-design/Development_HANDOVER.md)) — see [Status](#status). |
+| `scapi` | Client-side: SLAS guest token → SCAPI Shopper Products `?ids=...` → hydrate the placeholder `<template>` | Needs a SLAS public (PKCE) client, a separate SCAPI CORS Preferences registration for the storefront domain (not a setting on the SLAS client itself), and the five `ps_scapi*` preferences. Guest pricing only — see [Status](#status). |
 | `sfra` (default, customer-ready) | Client-side, per product id: `fetch()` the storefront's own already-cached `Tile-Show?pid=...` controller, same-origin with cookies (`credentials: 'same-origin'`) | No SLAS/Account Manager setup needed. Reflects logged-in/customer-group pricing and promotions for free, since it's the real storefront tile. |
 
 **The mode is chosen entirely in Business Manager, not in code or a Site Preference** — it's just which template a Content Slot (or Page Designer instance) points at:
@@ -133,7 +122,7 @@ Every zone renders in one of two modes, read from a `data-ps-render-mode` attrib
 - `enabled: false` → flip the `ps_enabled` Site Preference back on.
 - `enabled: true` but the page still shows nothing → check Business Manager → Merchant Tools → Online Marketing → Content Slots for that slot id: is a configuration actually **Assigned/active** (not a Draft), is the **Template** field spelled exactly right, and is there a schedule/customer-group rule excluding you right now?
 - If you just switched a slot to `-sfra` and the response is missing `tileUrlTemplate` entirely, the target instance is running an older code version — redeploy and confirm the new version is active in Business Manager → Administration → Site Development → Code.
-- `GetConfig` returns `enabled: true` and looks correct, but there are zero `[PersonalizationTiles]` console logs and zero `Tile-Show`/SCAPI network calls, with no error anywhere: the decision call itself likely came back empty (`{"personalizations":[]}`) — confirm with `window.getSalesforceInteractions().Personalization.fetch([pointName]).then(r => console.log(JSON.stringify(r)))` in the console. An empty result here means the point/experience isn't eligible/targeted for the current page in Data Cloud Personalization — a point name that returns real ids on one page (e.g. the homepage) can return nothing on another page even with identical cartridge config. This is a Personalization/Data Cloud admin targeting issue, not a cartridge bug — see [PageDesigner-Integration-Guide.md](docs/deployment-and-setup/PageDesigner-Integration-Guide.md#4-build-the-new-page-designer-page) for a worked example (confirmed on sandbox `zzbf-001`, 2026-09-21).
+- `GetConfig` returns `enabled: true` and looks correct, but there are zero `[PersonalizationTiles]` console logs and zero `Tile-Show`/SCAPI network calls, with no error anywhere: the decision call itself likely came back empty (`{"personalizations":[]}`) — confirm with `window.getSalesforceInteractions().Personalization.fetch([pointName]).then(r => console.log(JSON.stringify(r)))` in the console. An empty result here means the point/experience isn't eligible/targeted for the current page in Data Cloud Personalization — a point name that returns real ids on one page (e.g. the homepage) can return nothing on another page even with identical cartridge config. This is a Personalization/Data Cloud admin targeting issue, not a cartridge bug (confirmed on sandbox `zzbf-001`, 2026-09-21).
 
 ## Change History
 
@@ -144,9 +133,9 @@ Initial release. Cumulative feature set:
 - Core cartridge: `PersonalizationTiles-GetConfig` controller, `configHelper.js`, client-side decision → hydrate → render flow (2026-09-02)
 - Business Manager Site Preference metadata (`ps_*` custom attributes) (2026-09-02)
 - Page Designer custom component for placing a recommendation zone (2026-09-02)
-- Real Salesforce Interactions decision SDK call, `sfra` native-tile render mode, and `ps_pointNameMap` point-name resolution ported from the `sfra-poc` reference integration (2026-09-09)
+- Real Salesforce Interactions decision SDK call, `sfra` native-tile render mode, and `ps_pointNameMap` point-name resolution (2026-09-09)
 - Personalization view/click activity tracking (2026-09-10)
 - Site Preference metadata packaged as a Business Manager-importable zip (`ps-personalization-meta-import.zip`) (2026-09-10)
-- Server-side SLAS guest PKCE token exchange, Content Slot templates (home/cart, both render modes), and refreshed design docs, ported from `sfra-poc` (2026-09-17)
+- Server-side SLAS guest PKCE token exchange and Content Slot templates (home/cart, both render modes) (2026-09-17)
 - Renamed cartridge id from `plugin_personalization_scapi` to `plugin_b2c_d360_personalization` (2026-09-17)
 - Added a setup guide (PDF) (2026-09-17)

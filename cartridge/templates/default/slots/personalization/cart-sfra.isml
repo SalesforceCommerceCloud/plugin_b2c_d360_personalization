@@ -2,7 +2,7 @@
     SFRA-tile variant of the cart personalization slot: assign this template (instead of
     cart.isml) in the content slot configuration to render recommendation tiles via the
     storefront's native, already-cached Tile-Show product tile instead of client-side SCAPI
-    hydration. See docs/architecture-and-design/PersonalizationSCAPI-Design.md for the render-mode comparison.
+    hydration. See the README's Render mode section for the render-mode comparison.
 </iscomment>
 <isset name="contextKey" value="${'cart-crosssell'}" scope="pdict" />
 <isset name="renderMode" value="${'sfra'}" scope="pdict" />
