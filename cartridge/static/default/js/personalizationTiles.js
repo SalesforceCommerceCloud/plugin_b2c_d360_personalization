@@ -776,24 +776,31 @@
     // one page still only fetch config/tokens and set up lazy rendering a single time.
     var initStarted = false;
 
-    function fetchConfigAndInit(configUrl) {
+    function fetchConfigAndInit(configUrl, dcSdkUrl) {
         if (initStarted) return;
         initStarted = true;
 
         ensureCarouselCssLoaded();
         ensureRowLayoutCssLoaded();
 
-        fetchWithTimeout(configUrl, { method: 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        // Started in parallel with (not chained after) the GetConfig fetch below: dcSdkUrl is a
+        // static site preference the calling template already knows at render time (see
+        // productRecommendations.isml), so there's no reason to serialize this behind a second
+        // network round-trip just to re-learn a value that never depended on GetConfig's response.
+        var sdkPromise = ensureDcSdkLoaded(dcSdkUrl);
+
+        var configPromise = fetchWithTimeout(configUrl, { method: 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } })
             .then(function (res) {
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 return res.json();
-            })
-            .then(function (config) {
-                if (!config.enabled) return Promise.resolve();
-                return ensureDcSdkLoaded(config.dcSdkUrl).then(function () {
-                    var zones = Array.prototype.slice.call(document.querySelectorAll('[data-ps-point]'));
-                    observeZonesForLazyRender(zones, config);
-                });
+            });
+
+        Promise.all([configPromise, sdkPromise])
+            .then(function (results) {
+                var config = results[0];
+                if (!config.enabled) return;
+                var zones = Array.prototype.slice.call(document.querySelectorAll('[data-ps-point]'));
+                observeZonesForLazyRender(zones, config);
             })
             .catch(function (error) {
                 console.error('[PersonalizationTiles] Failed to fetch config:', error);

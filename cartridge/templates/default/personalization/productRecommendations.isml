@@ -1,18 +1,40 @@
 <isscript>
     var configHelper = require('*/cartridge/scripts/personalization/configHelper');
+    var psConfig = configHelper.getConfig();
     // Only gated on the enable/disable switch here — the Personalization decision call has
     // no dependency on the SCAPI hydration fields, so this doesn't require those to be set.
-    var psEnabled = configHelper.getConfig().enabled;
+    var psEnabled = psConfig.enabled;
     var psPointName = configHelper.resolvePointName('sfra', pdict.contextKey, pdict.personalizationPointName);
     var psCarouselId = 'ps-carousel-' + (pdict.contextKey || 'default');
     // Which tile-rendering strategy this zone uses — set by the slot template that includes
     // this file (see slots/personalization/{home,cart}.isml and their -sfra variants).
     // Whitelisted rather than trusted verbatim so a bad/missing value can never break rendering.
     var psRenderMode = (pdict.renderMode === 'sfra') ? 'sfra' : 'scapi';
+    // Origin-only (scheme+host[:port]), for the preconnect resource hints below — dcSdkUrl and
+    // shortCode are known at render time regardless of render mode, so the connection to
+    // whichever cross-origin host this zone will call can be warmed up before any JS has run.
+    var originMatch = psConfig.dcSdkUrl && psConfig.dcSdkUrl.match(/^https?:\/\/[^/]+/);
+    var psDcSdkOrigin = originMatch ? originMatch[0] : null;
+    var psScapiOrigin = psConfig.shortCode ? 'https://' + psConfig.shortCode + '.api.commercecloud.salesforce.com' : null;
 </isscript>
 
 <isif condition="${psEnabled}">
     <div class="ps-zone" data-ps-point="${psPointName}" data-ps-context="${pdict.contextKey || ''}" data-ps-render-mode="${psRenderMode}">
+        <iscomment>
+            Preconnect resource hints: warms up the TLS handshake to the Data Cloud SDK CDN and/or
+            the SCAPI shopper-products domain while the rest of the page is still loading, so the
+            deferred script's actual requests (fired later, at DOMContentLoaded) don't also pay for
+            connection setup. The SCAPI domain uses crossorigin because fetchLiveProductData() calls
+            it via fetch() with an Authorization header (a CORS request); the SDK domain doesn't,
+            since it's loaded via a plain &lt;script src&gt; tag, same as any third-party script.
+        </iscomment>
+        <isif condition="${psDcSdkOrigin}">
+            <link rel="preconnect" href="${psDcSdkOrigin}" />
+        </isif>
+        <isif condition="${psScapiOrigin}">
+            <link rel="preconnect" href="${psScapiOrigin}" crossorigin="anonymous" />
+        </isif>
+
         <iscomment>
             assets.addCss/addJs won't work here: this template renders inside a Content Slot,
             deep in the page body, well after common/layout/htmlHead already printed the page head —
@@ -24,6 +46,29 @@
         <script>
             window.psCarouselCssUrl = '${URLUtils.staticURL('/css/experience/components/commerceLayouts/carousel.css')}';
         </script>
+
+        <iscomment>
+            Inlined (not client-injected like carousel.css above) because it has to paint on first
+            render, before personalizationTiles.js has even downloaded — that's the whole point of
+            a loading placeholder. It only styles .ps-skeleton-* elements, so it can't conflict with
+            carousel.css/row-layout CSS which arrive later and restyle .carousel-item/.carousel-inner.
+        </iscomment>
+        <style>
+            .ps-skeleton-row { display: flex; gap: 1rem; overflow: hidden; position: relative; width: 100%; min-height: 260px; padding: 0.5rem 0; }
+            .ps-skeleton-tile { flex: 0 0 auto; width: 220px; }
+            .ps-skeleton-image, .ps-skeleton-line { border-radius: 4px; background: #e9e9e9; background-image: linear-gradient(90deg, #e9e9e9 0px, #f6f6f6 40px, #e9e9e9 80px); background-size: 600px; animation: ps-skeleton-shimmer 1.4s ease-in-out infinite; }
+            .ps-skeleton-image { width: 100%; height: 220px; }
+            .ps-skeleton-line { height: 14px; margin-top: 10px; }
+            .ps-skeleton-line-title { width: 80%; }
+            .ps-skeleton-line-price { width: 40%; }
+            @keyframes ps-skeleton-shimmer { 0% { background-position: -600px 0; } 100% { background-position: 600px 0; } }
+            .ps-skeleton-spinner-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+            .ps-skeleton-spinner { width: 32px; height: 32px; border: 3px solid rgba(0, 0, 0, 0.15); border-top-color: #0176d3; border-radius: 50%; animation: ps-skeleton-spin 0.8s linear infinite; }
+            @keyframes ps-skeleton-spin { to { transform: rotate(360deg); } }
+            @media (prefers-reduced-motion: reduce) {
+                .ps-skeleton-image, .ps-skeleton-line, .ps-skeleton-spinner { animation: none; }
+            }
+        </style>
 
         <h3 class="ps-zone-title">${pdict.title || Resource.msg('ps.recommendations.title', 'personalization', null)}</h3>
 
@@ -39,7 +84,27 @@
                  data-keyboard="true" data-interval="false"
                  data-xs="1" data-sm="2" data-md="4" data-number-of-slides="0"
                  data-ps-carousel>
-                <div class="carousel-inner" data-ps-tile-row aria-live="polite" aria-busy="true"></div>
+                <div class="carousel-inner" data-ps-tile-row aria-live="polite" aria-busy="true">
+                    <iscomment>
+                        Skeleton placeholder: shown immediately on first paint, before any JS has run.
+                        renderZone()/renderSfraZone() in personalizationTiles.js all set
+                        row.innerHTML = '' before appending real tiles, so this is cleared
+                        automatically once hydration completes — no extra JS needed.
+                    </iscomment>
+                    <div class="ps-skeleton-row" data-ps-skeleton aria-hidden="true">
+                        <iscomment>4 placeholder tiles, matching the data-md="4" desktop visible count above.</iscomment>
+                        <isloop begin="0" end="3" var="i">
+                            <div class="ps-skeleton-tile">
+                                <div class="ps-skeleton-image"></div>
+                                <div class="ps-skeleton-line ps-skeleton-line-title"></div>
+                                <div class="ps-skeleton-line ps-skeleton-line-price"></div>
+                            </div>
+                        </isloop>
+                        <div class="ps-skeleton-spinner-overlay">
+                            <div class="ps-skeleton-spinner"></div>
+                        </div>
+                    </div>
+                </div>
                 <ol class="pd-carousel-indicators" data-ps-indicators></ol>
                 <a class="carousel-control-prev" href="${'#' + psCarouselId}" role="button" data-slide="prev">
                     <span class="carousel-control-prev-icon" aria-hidden="true"></span>
@@ -81,11 +146,26 @@
     <script>
         window.psConfigUrl = '${URLUtils.url('PersonalizationTiles-GetConfig')}';
     </script>
-    <script src="${URLUtils.staticURL('/js/personalizationTiles.js')}"></script>
+    <iscomment>
+        ps_dcSdkUrl is a static site preference (see configHelper.getConfig above) -- the same
+        value GetConfig's JSON would return, just read here instead so the SDK script load below
+        can start immediately instead of waiting on the GetConfig round-trip to learn it.
+    </iscomment>
+    <script>
+        window.psDcSdkUrl = '${psConfig.dcSdkUrl}';
+    </script>
+    <iscomment>
+        defer (not async) on the script tag below: keeps it from blocking HTML parsing and
+        DOMContentLoaded the way a plain script tag with no attribute would, without racing the
+        DOMContentLoaded listener further down -- deferred scripts are guaranteed to finish
+        executing (so window.psInitTiles is defined) before DOMContentLoaded fires, unlike async,
+        which offers no such ordering guarantee.
+    </iscomment>
+    <script src="${URLUtils.staticURL('/js/personalizationTiles.js')}" defer="defer"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             if (window.psInitTiles) {
-                window.psInitTiles(window.psConfigUrl);
+                window.psInitTiles(window.psConfigUrl, window.psDcSdkUrl);
             }
         });
     </script>
